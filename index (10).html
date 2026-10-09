@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drainage Cleanliness & Waste Analysis AI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                            950: '#052e16'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <i data-lucide="waves" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">HydroScan AI</h1>
+                    <p class="text-xs text-slate-400">Drainage Cleanliness & Waste Analyzer</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="app.openHistoryModal()" class="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition border border-slate-700/50">
+                    <i data-lucide="history" class="w-4 h-4 text-emerald-400"></i>
+                    <span class="hidden sm:inline">History</span>
+                </button>
+                <button onclick="app.resetApp()" class="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition shadow-lg shadow-emerald-600/20">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    <span>New Scan</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+        <!-- Left Column: Upload & Presets -->
+        <div class="lg:col-span-5 space-y-6">
+
+            <!-- Upload Box -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm relative overflow-hidden group">
+                <div class="absolute -right-12 -top-12 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition duration-500 pointer-events-none"></div>
+
+                <h2 class="text-base font-semibold text-slate-200 mb-4 flex items-center justify-between">
+                    <span class="flex items-center space-x-2">
+                        <i data-lucide="upload-cloud" class="w-5 h-5 text-emerald-400"></i>
+                        <span>Upload Drainage Image</span>
+                    </span>
+                    <span class="text-xs font-normal text-slate-400">PNG, JPG, WEBP</span>
+                </h2>
+
+                <!-- Dropzone -->
+                <div id="dropzone" class="border-2 border-dashed border-slate-700 hover:border-emerald-500/50 rounded-xl p-8 text-center cursor-pointer transition bg-slate-950/40 relative flex flex-col items-center justify-center min-h-[220px]"
+                     ondragover="app.handleDragOver(event)" ondragleave="app.handleDragLeave(event)" ondrop="app.handleDrop(event)" onclick="document.getElementById('fileInput').click()">
+
+                    <input type="file" id="fileInput" class="hidden" accept="image/*" onchange="app.handleFileSelect(event)">
+
+                    <div id="uploadPrompt" class="space-y-3">
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto shadow-inner">
+                            <i data-lucide="image" class="w-7 h-7"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-300">Click to upload or drag & drop</p>
+                            <p class="text-xs text-slate-500 mt-1">Street drainage, sump pit, or catch basin</p>
+                        </div>
+                    </div>
+
+                    <!-- Image Preview Container (Strictly NO boxes overlay) -->
+                    <div id="previewContainer" class="hidden absolute inset-0 w-full h-full bg-slate-950 rounded-xl overflow-hidden flex items-center justify-center p-2">
+                        <img id="imagePreview" src="" alt="Preview" class="max-h-full max-w-full object-contain rounded-lg">
+                        <button onclick="event.stopPropagation(); app.clearImage();" class="absolute top-3 right-3 p-2 bg-slate-900/80 hover:bg-red-600/80 text-white rounded-full transition shadow-lg">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Drain details used in the alert -->
+                <div class="grid grid-cols-2 gap-3 mt-5">
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">Drain ID</label>
+                        <input id="drainId" value="D-102" placeholder="e.g. D-102" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm text-slate-200 placeholder-slate-500">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">Location</label>
+                        <input id="drainLocation" value="MG Road Junction, Bengaluru" placeholder="e.g. MG Road" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm text-slate-200 placeholder-slate-500">
+                    </div>
+                </div>
+                <p id="locationSource" class="text-[11px] text-slate-500 mt-2 leading-relaxed">Drain ID and location are filled in automatically for every new image (you can still edit them).</p>
+
+                <!-- Action Button -->
+                <button id="analyzeBtn" onclick="app.analyzeImage()" disabled class="w-full mt-5 py-3 px-4 rounded-xl font-semibold text-white bg-slate-800 text-slate-500 cursor-not-allowed transition flex items-center justify-center space-x-2 shadow-lg">
+                    <i data-lucide="cpu" class="w-5 h-5"></i>
+                    <span>Run Precise AI Analysis</span>
+                </button>
+            </div>
+
+            <!-- Real delivery to friend's device -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                <h3 class="text-sm font-semibold text-slate-300 mb-1 flex items-center space-x-2">
+                    <i data-lucide="send" class="w-4 h-4 text-emerald-400"></i>
+                    <span>Send Alerts to Friend's Device</span>
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">Alerts are pushed to the phone automatically through ntfy (free, no account or API key).</p>
+
+                <label class="text-xs text-slate-400 mb-1 block">Alert channel name (ntfy topic)</label>
+                <input id="ntfyTopic" oninput="app.saveDelivery()" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 focus:border-emerald-500 outline-none text-sm text-slate-200 font-mono">
+                <div class="mt-2 text-xs text-slate-400 bg-slate-950/60 border border-slate-800 rounded-xl p-3 leading-relaxed">
+                    <b class="text-slate-300">Friend's one-time setup:</b> install the free <b>ntfy</b> app (Play Store / App Store), tap <b>+</b>, and subscribe to the channel name above. Every alert then pops up on his phone like a normal notification.
+                </div>
+                <p class="mt-2 text-xs text-slate-500">Check delivery: open <a id="ntfyLink" href="https://ntfy.sh/" target="_blank" rel="noopener" class="text-emerald-400 hover:underline break-all">ntfy.sh</a> - alerts appear there instantly.</p>
+
+            </div>
+
+            <!-- Built-in Reference Sample Test Cases -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                <h3 class="text-sm font-semibold text-slate-300 mb-3 flex items-center space-x-2">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+                    <span>Test with Reference Samples:</span>
+                </h3>
+                <div class="grid grid-cols-3 gap-3">
+                    <button onclick="app.loadPreset('clear')" class="group relative rounded-xl overflow-hidden border border-slate-700 hover:border-emerald-500 transition aspect-video bg-slate-950 flex flex-col items-center justify-center p-2 text-center">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400 mb-1 group-hover:scale-110 transition"></i>
+                        <span class="text-xs font-medium text-slate-300">Clear Drainage</span>
+                    </button>
+                    <button onclick="app.loadPreset('leaves')" class="group relative rounded-xl overflow-hidden border border-slate-700 hover:border-emerald-500 transition aspect-video bg-slate-950 flex flex-col items-center justify-center p-2 text-center">
+                        <i data-lucide="leaf" class="w-5 h-5 text-amber-400 mb-1 group-hover:scale-110 transition"></i>
+                        <span class="text-xs font-medium text-slate-300">Leaves & Mud</span>
+                    </button>
+                    <button onclick="app.loadPreset('blocked')" class="group relative rounded-xl overflow-hidden border border-slate-700 hover:border-emerald-500 transition aspect-video bg-slate-950 flex flex-col items-center justify-center p-2 text-center">
+                        <i data-lucide="trash-2" class="w-5 h-5 text-red-400 mb-1 group-hover:scale-110 transition"></i>
+                        <span class="text-xs font-medium text-slate-300">Plastic & Bottles</span>
+                    </button>
+                </div>
+            <button onclick="app.testAlert('severe')" class="mt-3 w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition flex items-center justify-center space-x-2">
+                    <i data-lucide="bell-ring" class="w-4 h-4"></i>
+                    <span>Send Test Alert (no AI needed)</span>
+                </button>
+                <button onclick="app.testAlert('moderate')" class="mt-2 w-full py-2 px-4 rounded-xl text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition">
+                    Test Moderate Blockage (officer only)
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Analysis Results & Status -->
+        <div class="lg:col-span-7 space-y-6">
+
+            <!-- Loading State View -->
+            <div id="loadingState" class="hidden bg-slate-900/80 border border-slate-800 rounded-2xl p-12 shadow-xl backdrop-blur-sm flex flex-col items-center justify-center text-center min-h-[480px]">
+                <div class="relative w-20 h-20 mb-6">
+                    <div class="absolute inset-0 rounded-full border-4 border-emerald-500/20 animate-pulse"></div>
+                    <div class="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <i data-lucide="scan" class="w-8 h-8 text-emerald-400"></i>
+                    </div>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-200">Analyzing water-entry area & debris...</h3>
+                <p class="text-sm text-slate-400 mt-2 max-w-sm">Verifying grate visibility, leaves, plastic pieces, twigs, mud, paper, or blockages without bounding boxes.</p>
+            </div>
+
+            <!-- Default Empty State View -->
+            <div id="emptyState" class="bg-slate-900/80 border border-slate-800 rounded-2xl p-12 shadow-xl backdrop-blur-sm flex flex-col items-center justify-center text-center min-h-[480px]">
+                <div class="w-20 h-20 rounded-3xl bg-slate-800/80 text-slate-500 flex items-center justify-center mb-6 shadow-inner border border-slate-700/50">
+                    <i data-lucide="activity" class="w-10 h-10 text-emerald-500/60"></i>
+                </div>
+                <div id="analysisError" class="hidden mb-5 max-w-md w-full text-left text-xs rounded-xl border border-red-500/40 bg-red-950/40 text-red-200 p-3 leading-relaxed break-words"></div>
+                <h3 class="text-lg font-semibold text-slate-300">Awaiting Drainage Image</h3>
+                <p class="text-sm text-slate-500 mt-2 max-w-md">Upload an image or select a sample on the left. The AI will output exact cleanliness status and debris categories, and automatically send an alert through ntfy if the drain is blocked.</p>
+            </div>
+
+            <!-- Result Dashboard View -->
+            <div id="resultState" class="hidden space-y-6">
+
+                <!-- Status Header Banner -->
+                <div id="statusBanner" class="p-6 rounded-2xl border shadow-xl flex items-center justify-between transition-all duration-300">
+                    <div class="flex items-center space-x-4">
+                        <div id="statusIconContainer" class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg">
+                            <!-- Icon dynamically injected -->
+                        </div>
+                        <div>
+                            <span class="text-xs font-semibold tracking-wider uppercase opacity-80">Final Output Status</span>
+                            <h2 id="statusTitle" class="text-2xl font-bold tracking-tight">--</h2>
+                        </div>
+                    </div>
+                    <div id="severityBadge" class="px-4 py-2 rounded-xl text-xs font-bold tracking-wider uppercase border">
+                        --
+                    </div>
+                </div>
+
+                <!-- Alert Status -->
+                <div id="alertStatus" class="hidden p-4 rounded-2xl border shadow-xl flex items-start space-x-3 text-sm">
+                    <div id="alertStatusIcon" class="mt-0.5"></div>
+                    <div>
+                        <p id="alertStatusTitle" class="font-semibold"></p>
+                        <p id="alertStatusDetail" class="text-xs opacity-80 mt-0.5"></p>
+                    </div>
+                </div>
+
+                <!-- Detected Items & Categories -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-sm space-y-6">
+
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-300 mb-3 flex items-center space-x-2">
+                            <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+                            <span>Detected Debris & Objects</span>
+                        </h3>
+                        <div id="detectedCategoriesList" class="flex flex-wrap gap-2">
+                            <!-- Tags injected here -->
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-800/80">
+                        <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+                            <span class="text-xs font-medium text-slate-400 flex items-center space-x-1.5 mb-1">
+                                <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-amber-400"></i>
+                                <span>Clean-up Urgency</span>
+                            </span>
+                            <p id="urgencyText" class="text-sm font-semibold text-slate-200">--</p>
+                        </div>
+                        <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+                            <span class="text-xs font-medium text-slate-400 flex items-center space-x-1.5 mb-1">
+                                <i data-lucide="wrench" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                <span>Recommended Action</span>
+                            </span>
+                            <p id="actionText" class="text-sm font-semibold text-slate-200">--</p>
+                        </div>
+                    </div>
+
+                    <!-- Detailed AI Report Summary -->
+                    <div>
+                        <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Detailed Cleanliness Assessment</h4>
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800/80 text-sm text-slate-300 leading-relaxed" id="detailedSummary">
+                            --
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="history" class="w-5 h-5 text-emerald-400"></i>
+                    <h3 class="font-bold text-lg text-slate-200">Scan History</h3>
+                </div>
+                <button onclick="app.closeHistoryModal()" class="p-2 text-slate-400 hover:text-white rounded-lg transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="historyListContainer" class="p-6 overflow-y-auto space-y-4 flex-grow">
+                <!-- History Items -->
+            </div>
+            <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-between items-center">
+                <span class="text-xs text-slate-500" id="historyCount">0 scans recorded</span>
+                <button onclick="app.clearHistory()" class="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium transition border border-red-500/20">
+                    Clear History
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>
